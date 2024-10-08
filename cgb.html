@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Fly to a location based on scroll position</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: fixed; top: 0; bottom: 0; width: 75%; right: 0; } /* Fix for the map */
+</style>
+</head>
+<body>
+<style>
+    #features {
+        width: 25%;  /* Set the features container width to 40% */
+        margin-right: 75%; /* Move the features container to the left by 60% */
+        font-family: sans-serif;
+        overflow-y: scroll;
+        background-color: #fafafa;
+        position: fixed; /* Keep the features fixed on the left */
+        left: 0; /* Position it on the left side */
+        height: 100vh; /* Ensure the height matches the full screen */
+    }
+    section {
+        padding: 25px 50px;
+        line-height: 25px;
+        border-bottom: 1px solid #ddd;
+        opacity: 0.25;
+        font-size: 13px;
+        cursor: pointer; /* Add this to indicate it's clickable */
+    }
+    section.active {
+        opacity: 1;
+    }
+    section:last-child {
+        border-bottom: none;
+        margin-bottom: 200px;
+    }
+    button {
+        display: block;
+        margin-top: 20px;
+        padding: 10px 15px;
+        font-size: 14px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    button:hover {
+        background-color: #0056b3;
+    }
+    
+    /* Modal styling */
+    .modal {
+        display: none; /* Hidden by default */
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Dark background */
+    }
+    .modal-content {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        width: 90%;
+        max-width: 1100px;
+        height: 90%;
+        max-height: 600px;
+    }
+    .modal iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+    }
+    .close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 18px;
+        color: #aaa;
+        cursor: pointer;
+    }
+    .close:hover {
+        color: black;
+    }
+</style>
+
+<div id="map"></div>
+<div id="features">
+    <section id="khor" class="active">
+        <h3>Al Khor Properties</h3>
+        <p>
+            Near Cornishe.
+        </p>
+        <button onclick="openModal('https://raedaldweik.github.io/khor')">View SAS Analytics</button>
+    </section>
+    <section id="doha">
+        <h3>Doha Properties</h3>
+        <p>
+            Near Dafna Street.
+        </p>
+        <button onclick="openModal('https://raedaldweik.github.io/doha')">View SAS Analytics</button>
+    </section>
+</div>
+
+<!-- Modal -->
+<div id="myModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <iframe id="modalIframe" src="" title="Flood SDK"></iframe>
+    </div>
+</div>
+
+<script>
+	mapboxgl.accessToken = 'pk.eyJ1IjoicmFlZGR3ZWlrIiwiYSI6ImNtMTZqZGtpeTBta2cydnM4NjBkenhsMG8ifQ.r3ufHWJMoGh_DCH3XDhDAg';
+    const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/raeddweik/cm1yvb3x500dv01pd9ft6elaj',
+        center: [51.51270983390583, 25.685282714669185], // Zayed University coordinates
+        zoom: 16.909359976524573,
+        bearing: -50.39999999999952,
+        pitch: 43.80812605797468
+    });
+
+    const chapters = {
+        'khor': {
+            bearing: -50.39999999999952,
+            center: [51.51270983390583, 25.685282714669185], // Zayed University coordinates
+            zoom: 16.909359976524573,
+            pitch: 43.80812605797468
+        },
+        'doha': {
+            duration: 6000,
+            center: [51.52748351041981, 25.32988229917808], // Paris-Sorbonne University coordinates
+            bearing: -15.619848618551032,
+            zoom: 16.274783462479814,
+            pitch: 53.99999999999998
+        }
+    };
+
+    let activeChapterName = 'zayed'; // Initial chapter should match the first section
+    function setActiveChapter(chapterName) {
+        if (chapterName === activeChapterName) return;
+
+        map.flyTo(chapters[chapterName]);
+
+        document.getElementById(chapterName).classList.add('active');
+        document.getElementById(activeChapterName).classList.remove('active');
+
+        activeChapterName = chapterName;
+    }
+
+    function isElementOnScreen(id) {
+        const element = document.getElementById(id);
+        const bounds = element.getBoundingClientRect();
+        return bounds.top < window.innerHeight && bounds.bottom > 0;
+    }
+
+    // On every scroll event, check which element is on screen
+    window.onscroll = () => {
+        for (const chapterName in chapters) {
+            if (isElementOnScreen(chapterName)) {
+                setActiveChapter(chapterName);
+                break;
+            }
+        }
+    };
+
+    // Add click functionality to sections
+    document.querySelectorAll('section').forEach(section => {
+        section.addEventListener('click', (event) => {
+            const chapterName = section.id;
+            setActiveChapter(chapterName);
+        });
+    });
+
+    // Modal functions
+    function openModal(url) {
+        document.getElementById("myModal").style.display = "block";
+        document.getElementById("modalIframe").src = url;
+    }
+
+    function closeModal() {
+        document.getElementById("myModal").style.display = "none";
+        document.getElementById("modalIframe").src = ""; // Reset iframe source when closed
+    }
+
+    map.on('move', () => {
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+        const bearing = map.getBearing();
+        const pitch = map.getPitch();
+
+        console.log(`Center: [${center.lng}, ${center.lat}]`);
+        console.log(`Zoom: ${zoom}`);
+        console.log(`Bearing: ${bearing}`);
+        console.log(`Pitch: ${pitch}`);
+    });
+
+</script>
+
+</body>
+</html>
